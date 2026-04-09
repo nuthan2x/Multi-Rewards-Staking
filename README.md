@@ -24,11 +24,11 @@ Synthetix [StakingRewards](https://docs.synthetix.io/contracts/source/contracts/
 
 ```
 ┌─────────────────────────────────────────────┐
-│            StakingMultiRewards               │
+│            StakingMultiRewards              │
 │                                             │
 │  stakingToken ◄── stake() / withdraw()      │
 │                                             │
-│  rewardTokenA ──► getReward / getAllRewards  │
+│  rewardTokenA ──► getReward / getAllRewards │
 │  rewardTokenB ──►                           │
 │  rewardTokenN ──►                           │
 │                                             │
