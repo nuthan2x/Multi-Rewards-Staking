@@ -140,6 +140,23 @@ contract StakingMultiRewards is Ownable, Pausable, ReentrancyGuard {
         }
     }
 
+    function getRemovedTokenRewards(address[] memory removedRewardTokens) external nonReentrant {
+        for (uint256 i = 0; i < removedRewardTokens.length; i++) {
+            address rewardToken = removedRewardTokens[i];
+
+            require(!_rewardsTokens.contains(rewardToken), "rewardToken already added");
+            require(rewardPerTokenStored[rewardToken] != 0, "rewards never streamed");
+
+            uint256 reward = earned(msg.sender, rewardToken);
+            require(reward > 0, "no rewards");
+
+            rewards[msg.sender][rewardToken] = 0;
+            userRewardPerTokenPaid[msg.sender][rewardToken] = rewardPerTokenStored[rewardToken];
+
+            IERC20(rewardToken).safeTransfer(msg.sender, reward);
+            emit RewardPaid(msg.sender, rewardToken, reward);
+        }
+    }
 
     /* ========== RESTRICTED FUNCTIONS ========== */
 
