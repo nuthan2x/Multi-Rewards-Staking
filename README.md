@@ -22,26 +22,42 @@ Synthetix [StakingRewards](https://docs.synthetix.io/contracts/source/contracts/
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────┐
-│            StakingMultiRewards              │
-│                                             │
-│  stakingToken ◄── stake() / withdraw()      │
-│                                             │
-│  rewardTokenA ──► getReward / getAllRewards │
-│  rewardTokenB ──►                           │
-│  rewardTokenN ──►                           │
-│                                             │
-│  updateRewards modifier loops ALL tokens    │
-│  on every stake/withdraw/claim/notify       │
-└─────────────────────────────────────────────┘
-```
-
 Users deposit a single `stakingToken` and earn rewards denominated in one or more ERC20 reward tokens. Each reward token has its own independent `rewardRate`, `rewardsDuration`, and `periodFinish`. Reward accounting follows the Synthetix cumulative `rewardPerToken` pattern, extended per-token.
+
+
+```
+                         ┌──────────────────────────────────────────────┐
+                         │          StakingMultiRewards                 │
+                         │                                              │
+                         │  ┌────────────────────────────────────────┐  │
+   USERS                 │  │          updateRewards(user)           │  │     ADMIN
+  ──────                 │  │  for each rewardToken:                 │  │    ───────
+                         │  │    rewardPerTokenStored = rewardPer..  │  │
+  stake(amt) ──────────► │  │    lastUpdateTime = lastTimeReward..   │  │ ◄── addRewardToken(token, dur)
+                         │  │    if user != 0:                       │  │ ◄── setRewardsDuration(token, dur)
+  withdraw(amt) ───────► │  │      rewards[user] = earned(user)      │  │ ◄── pause() / unPause()
+                         │  │      userRewardPerTokenPaid = stored   │  │ ◄── recoverERC20(token, amt)
+  getReward(token) ────► │  └────────────────────────────────────────┘  │
+                         │                                              │
+  getAllRewards() ─────► │                                              │     DISTRIBUTOR
+                         │                                              │    ─────────────
+  exit() ──────────────► │                                              │
+                         │                                              │ ◄── notifyRewardAmount(token, amt)
+                         └──────────────────────────────────────────────┘
+
+
+  FLOW:
+  ═════
+  1. Owner calls addRewardToken(tokenA, 7 days)
+  2. Distributor transfers tokenA to contract, calls notifyRewardAmount(tokenA, 1000e18)
+  3. Users stake() stakingToken ──► rewards accrue over time
+  4. Users call getReward(tokenA) or getAllRewards() to claim
+  5. After period ends, distributor can notifyRewardAmount again (or owner can setRewardsDuration)
+```
 
 ### Key Design Decision: Append-Only Reward Tokens
 
-Reward tokens **cannot be removed** once added. The `updateRewards` modifier iterates over all registered reward tokens on every user interaction. Removing a token would desync `userRewardPerTokenPaid` from `balances` changes, enabling reward theft or loss. Keeping the set append-only (like [ZivoeRewards](https://github.com/sherlock-audit/2024-03-zivoe/blob/main/zivoe-core-foundry/src/ZivoeRewards.sol)) eliminates this entire class of bugs.
+Reward tokens **cannot be removed** once added. The `updateRewards` modifier iterates over all registered reward tokens on every user interaction. Removing a token would desync `userRewardPerTokenPaid` from `balances` changes, enabling reward theft or loss. Keeping the set append-only (like [ZivoeRewards](https://github.com/Zivoe/zivoe-core-foundry/blob/master/src/ZivoeRewards.sol)) eliminates this entire class of bugs.
 
 ### WAD-Scaled `rewardRate`
 
