@@ -5,7 +5,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
-import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /// @notice Rewriting `synthetix/contracts/StakingRewards.sol` in  0.8.0 compiler version with latest openzeppelin lib
 contract StakingRewards is Ownable, Pausable, ReentrancyGuard {
