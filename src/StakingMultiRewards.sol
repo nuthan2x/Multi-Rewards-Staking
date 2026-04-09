@@ -184,8 +184,8 @@ contract StakingMultiRewards is Ownable, Pausable, ReentrancyGuard {
         if (block.timestamp >= periodFinish[rewardToken]) {
             rewardRate[rewardToken] = reward * WAD / rewardsDuration[rewardToken];
         } else {
-            uint256 leftOver = rewardRate[rewardToken] * (periodFinish[rewardToken] - block.timestamp);
-            rewardRate[rewardToken] = (reward * WAD + leftOver) / rewardsDuration[rewardToken];
+            uint256 leftOver = rewardRate[rewardToken] * (periodFinish[rewardToken] - block.timestamp) / WAD;
+            rewardRate[rewardToken] = (reward + leftOver) * WAD / rewardsDuration[rewardToken];
         }
 
         uint256 balance = IERC20(rewardToken).balanceOf(address(this));
