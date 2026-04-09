@@ -140,24 +140,6 @@ contract StakingMultiRewards is Ownable, Pausable, ReentrancyGuard {
         }
     }
 
-    function getRemovedTokenRewards(address[] memory removedRewardTokens) external nonReentrant {
-        for (uint256 i = 0; i < removedRewardTokens.length; i++) {
-            address rewardToken = removedRewardTokens[i];
-
-            require(!_rewardsTokens.contains(rewardToken), "rewardToken already added");
-            require(rewardPerTokenStored[rewardToken] != 0, "rewards never streamed");
-
-            uint256 reward = earned(msg.sender, rewardToken);
-            require(reward > 0, "no rewards");
-
-            rewards[msg.sender][rewardToken] = 0;
-            userRewardPerTokenPaid[msg.sender][rewardToken] = rewardPerTokenStored[rewardToken];
-
-            IERC20(rewardToken).safeTransfer(msg.sender, reward);
-            emit RewardPaid(msg.sender, rewardToken, reward);
-        }
-    }
-
     /* ========== RESTRICTED FUNCTIONS ========== */
 
     // @todo scale reward rate by WAD always
@@ -217,17 +199,6 @@ contract StakingMultiRewards is Ownable, Pausable, ReentrancyGuard {
         emit RewardTokenAdded(rewardToken, _rewardsDuration);
     }
 
-    // @todo test add rem , if rewards claimable?
-    // @todo test add rem add flow, if rewards claimable?
-    // @todo test add rem add remove flow, if rewards claimable?
-    function removeRewardToken(address rewardToken) external onlyOwner updateRewards(address(0)) {
-        require(_rewardsTokens.contains(rewardToken), "rewardToken not added");
-        require(block.timestamp > periodFinish[rewardToken], "rewards are still streaming");
-
-        _rewardsTokens.remove(rewardToken);
-        emit RewardTokenRemoved(rewardToken);
-    }
-
     /* ========== MODIFIERS ========== */
 
     modifier onlyRewardsDistribution() {
@@ -257,7 +228,6 @@ contract StakingMultiRewards is Ownable, Pausable, ReentrancyGuard {
     event RewardPaid(address indexed user, address indexed rewardToken, uint256 reward);
     event Recovered(address token, uint256 amount);
     event RewardTokenAdded(address indexed rewardToken, uint256 rewardsDuration);
-    event RewardTokenRemoved(address indexed rewardToken);
     event RewardsDurationUpdated(address indexed rewardToken, uint256 rewardsDuration);
     event RewardAdded(address indexed rewardToken, uint256 reward);
 
