@@ -176,6 +176,15 @@ contract StakingMultiRewards is Ownable, Pausable, ReentrancyGuard {
     ///      leftover rewards roll into the new period. Caller must transfer reward
     ///      tokens to this contract beforehand.
     ///      Reverts if contract balance can't sustain the computed rewardRate.
+    ///
+    ///      KNOWN QUIRK (inherited from Synthetix): periodFinish is set to
+    ///      `block.timestamp + rewardsDuration` at notify time, NOT when the first
+    ///      stake arrives. If totalSupply == 0, rewards between notify and first stake
+    ///      go undistributed (rewardPerToken returns stored snapshot when supply is 0).
+    ///      Tokens stay in the contract and are usable in the next notify cycle.
+    ///      Ensure at least one staker exists before notifying for optimal distribution.
+    ///      See: https://0xmacro.com/blog/synthetix-staking-rewards-issue-inefficient-reward-distribution/
+    ///
     /// @param rewardToken Must already be registered via addRewardToken.
     /// @param reward Total reward amount (raw, not WAD-scaled) to distribute over rewardsDuration.
     function notifyRewardAmount(address rewardToken, uint256 reward) external onlyRewardsDistribution updateRewards(address(0)) {

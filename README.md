@@ -116,12 +116,13 @@ Every `stake`, `withdraw`, `getReward`, `getAllRewards`, `exit`, and `notifyRewa
 - **Don't add `stakingToken` as a reward token.** The `balanceOf` check in `notifyRewardAmount` includes staked deposits, which would inflate the allowed `rewardRate`.
 - **Don't assume excess reward tokens can be recovered.** `recoverERC20` blocks both `stakingToken` and all registered reward tokens. If you accidentally send excess reward tokens, account for them in the next `notifyRewardAmount` by passing a smaller `reward` amount.
 - **Don't call `notifyRewardAmount` with more than the contract's balance.** It will revert with "Provided reward too high".
-- **Don't expect rewards during zero-supply periods.** If no one is staked, rewards for that time window are permanently lost (accrue to no one).
+- **Avoid calling `notifyRewardAmount` when no one is staked.** `periodFinish` starts at notify time, not when the first `stake()` arrives. Rewards during a zero-supply window go undistributed — they stay in the contract and can be re-emitted in the next notify cycle, but the intended schedule is disrupted. ([0xMacro writeup](https://0xmacro.com/blog/synthetix-staking-rewards-issue-inefficient-reward-distribution/))
 
 ## Risks
 
 - **Owner trust.** The owner can pause staking (but not withdrawals/claims), change the rewards distributor, and recover non-staking/non-reward tokens. A malicious owner cannot steal staked tokens or reward tokens.
 - **Reward token quality.** Each reward token's `safeTransfer` is called during claims. A malicious or broken ERC20 could revert, blocking claims for all tokens in `getAllRewards`/`exit`. Use `getReward(token)` to claim individual tokens if one is misbehaving.
+- **Undistributed rewards on empty pool.** Inherited from Synthetix: `periodFinish` starts at `notifyRewardAmount` time, not at first `stake()`. If `totalSupply == 0`, `rewardPerToken` returns 0, so rewards for that window go undistributed. The tokens remain in the contract and are usable in the next `notifyRewardAmount` cycle (the balance check accounts for the full balance). ([0xMacro writeup](https://0xmacro.com/blog/synthetix-staking-rewards-issue-inefficient-reward-distribution/))
 - **Integer dust.** Division truncation means the sum of distributed rewards may be slightly less than the notified amount (typically < `rewardsDuration` wei per period). Undistributed dust remains in the contract and is absorbed by the next `notifyRewardAmount`.
 - **No reward token removal.** Once added, a reward token stays in the `updateRewards` loop forever. A finished reward token with no new notifications costs only gas (the time delta is 0, so the stored value doesn't change). Plan your token list carefully.
 
@@ -190,7 +191,7 @@ Pause/unpause staking. Withdrawals and claims remain enabled when paused.
 ### Restricted (RewardsDistribution)
 
 #### `notifyRewardAmount(address rewardToken, uint256 reward)`
-Start or top-up a reward period. Transfer reward tokens to the contract **before** calling. If called mid-period, leftover rewards roll into the new period. Reverts if balance can't sustain the rate.
+Start or top-up a reward period. Transfer reward tokens to the contract **before** calling. If called mid-period, leftover rewards roll into the new period. Reverts if balance can't sustain the rate. **Known quirk:** `periodFinish` starts immediately — if `totalSupply == 0`, rewards between this call and the first `stake()` go undistributed. Tokens stay in the contract and can be re-emitted in the next cycle. ([0xMacro writeup](https://0xmacro.com/blog/synthetix-staking-rewards-issue-inefficient-reward-distribution/))
 
 ## Events
 
