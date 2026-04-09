@@ -400,6 +400,14 @@ contract StakingRewards is Ownable, Pausable, ReentrancyGuard {
         }
     }
 
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    function unPause() external onlyOwner {
+        _unpause();
+    }
+
     /* ========== MODIFIERS ========== */
 
     modifier updateReward(address account) {
